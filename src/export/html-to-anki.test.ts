@@ -9,6 +9,13 @@ describe("htmlToAnki", () => {
         expect(out).not.toContain("data-cloze");
     });
 
+    it("preserves cloze hints on export", () => {
+        const html =
+            '<p><span data-cloze="1" data-hint="a city" class="cloze-blank">Paris</span></p>';
+        const { html: out } = htmlToAnki(html, () => undefined);
+        expect(out).toContain("{{c1::Paris::a city}}");
+    });
+
     it("preserves formatting inside blanks", () => {
         const html = '<p><span data-cloze="2" class="cloze-blank"><strong>word</strong></span></p>';
         const { html: out } = htmlToAnki(html, () => undefined);

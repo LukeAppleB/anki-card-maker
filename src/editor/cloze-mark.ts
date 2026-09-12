@@ -36,6 +36,14 @@ export const ClozeMark = Mark.create({
                     class: "cloze-blank",
                 }),
             },
+            // Anki supports {{c1::text::hint}}. There is no UI for hints here, but
+            // imported ones are carried through so re-exporting does not lose them.
+            hint: {
+                default: null,
+                parseHTML: (element) => element.getAttribute("data-hint"),
+                renderHTML: (attributes) =>
+                    attributes.hint ? { "data-hint": String(attributes.hint) } : {},
+            },
         };
     },
 

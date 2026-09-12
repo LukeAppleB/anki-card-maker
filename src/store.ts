@@ -68,6 +68,47 @@ export async function loadAllMediaIds(): Promise<string[]> {
         .map((key) => key.slice(MEDIA_PREFIX.length));
 }
 
+/// Object URLs die with the page, so stored HTML holds a stale src plus a
+/// data-media-id. This points each image back at a fresh URL for its blob.
+async function rehydrateHtml(html: string, cache: Map<string, string>): Promise<string> {
+    if (!html.includes("data-media-id")) {
+        return html;
+    }
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    for (const img of doc.body.querySelectorAll("img[data-media-id]")) {
+        const mediaId = img.getAttribute("data-media-id");
+        if (!mediaId) continue;
+        let url = cache.get(mediaId);
+        if (!url) {
+            const record = await loadMedia(mediaId);
+            if (!record) continue;
+            url = URL.createObjectURL(record.blob);
+            cache.set(mediaId, url);
+        }
+        img.setAttribute("src", url);
+    }
+    return doc.body.innerHTML;
+}
+
+export async function rehydrateCardMedia(cards: Card[]): Promise<Card[]> {
+    const cache = new Map<string, string>();
+    const rehydrated: Card[] = [];
+    for (const card of cards) {
+        if (isClozeFields(card.fields)) {
+            const text = await rehydrateHtml(card.fields.text, cache);
+            const extra = await rehydrateHtml(card.fields.extra, cache);
+            const changed = text !== card.fields.text || extra !== card.fields.extra;
+            rehydrated.push(changed ? { ...card, fields: { text, extra } } : card);
+        } else {
+            const front = await rehydrateHtml(card.fields.front, cache);
+            const back = await rehydrateHtml(card.fields.back, cache);
+            const changed = front !== card.fields.front || back !== card.fields.back;
+            rehydrated.push(changed ? { ...card, fields: { front, back } } : card);
+        }
+    }
+    return rehydrated;
+}
+
 export function isClozeFields(fields: ClozeFields | QAFields): fields is ClozeFields {
     return "text" in fields;
 }

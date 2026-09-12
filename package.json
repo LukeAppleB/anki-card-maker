@@ -13,7 +13,8 @@
     "serve": "node scripts/serve.mjs --root dist --port 4321",
     "app:install": "bash scripts/install-app.sh",
     "app:uninstall": "bash scripts/uninstall.sh",
-    "verify:anki": "vitest run src/export/write-apkg.test.ts && /tmp/card-maker-venv/bin/python scripts/verify-import.py"
+    "fixture:anki": "/tmp/card-maker-venv/bin/python scripts/make-anki-deck.py",
+    "verify:anki": "vitest run src/export/write-apkg.test.ts && /tmp/card-maker-venv/bin/python scripts/verify-import.py && /tmp/card-maker-venv/bin/python scripts/verify-roundtrip.py"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",

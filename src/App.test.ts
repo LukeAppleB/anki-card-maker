@@ -14,6 +14,7 @@ describe("App", () => {
             expect(buttons).toContain("+ Fill-in-the-blank");
             expect(buttons).toContain("+ Question & Answer");
             expect(target.textContent).toContain("Export to Anki");
+            expect(target.textContent).toContain("Import deck");
         } finally {
             unmount(app);
             target.remove();

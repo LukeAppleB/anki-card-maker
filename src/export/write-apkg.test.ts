@@ -35,5 +35,34 @@ describe("write apkg for anki verification", () => {
         writeFileSync(outPath, Buffer.from(await result.blob.arrayBuffer()));
         expect(result.noteCount).toBe(2);
         expect(result.cardCount).toBe(2);
+
+        // Anki only updates a matching note when the incoming modification
+        // time is newer, so the edited package must not share the same second.
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 1100));
+
+        const edited = sampleCards.map((card) =>
+            card.kind === "cloze"
+                ? {
+                      ...card,
+                      fields: {
+                          text: '<p>The <span data-cloze="1" class="cloze-blank">city</span> is Paris.</p>',
+                          extra: "<p>France</p>",
+                      },
+                  }
+                : {
+                      ...card,
+                      fields: { front: "<p>What is 2+2?</p>", back: "<p>four</p>" },
+                  },
+        );
+        const editedResult = await buildApkg({
+            deckName: "Verify Deck",
+            cards: edited,
+            mediaResolver: () => undefined,
+        });
+        writeFileSync(
+            resolve(outDir, "verify-edited.apkg"),
+            Buffer.from(await editedResult.blob.arrayBuffer()),
+        );
+        expect(editedResult.noteCount).toBe(2);
     });
 });

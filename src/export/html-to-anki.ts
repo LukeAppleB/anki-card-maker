@@ -66,11 +66,30 @@ export function htmlToAnki(
         img.removeAttribute("data-media-id");
     });
 
+    // Blanks are swapped for placeholder text before serialising, because putting
+    // "{{c1::<b>x</b>}}" in a text node would escape the inner markup.
+    const token = `cmcloze${crypto.randomUUID().replace(/-/g, "")}`;
+    const clozeTexts: string[] = [];
+
+    // Innermost first, so an outer blank picks up the placeholder of an inner one.
+    for (const el of [...doc.body.querySelectorAll(CLOZE_SELECTOR)].reverse()) {
+        const ordinal = el.getAttribute("data-cloze") ?? "1";
+        const hint = el.getAttribute("data-hint");
+        const inner = el.innerHTML;
+        const rendered = hint
+            ? `{{c${ordinal}::${inner}::${hint}}}`
+            : `{{c${ordinal}::${inner}}}`;
+        const index = clozeTexts.push(rendered) - 1;
+        el.replaceWith(doc.createTextNode(`${token}${index}_`));
+    }
+
     let outputHtml = doc.body.innerHTML;
-    outputHtml = outputHtml.replace(
-        /<span[^>]*\sdata-cloze="(\d+)"[^>]*>([\s\S]*?)<\/span>/gi,
-        (_match, n: string, inner: string) => `{{c${n}::${inner}}}`,
-    );
+    for (let pass = 0; pass < 12 && outputHtml.includes(token); pass++) {
+        outputHtml = outputHtml.replace(
+            new RegExp(`${token}(\\d+)_`, "g"),
+            (_match, index: string) => clozeTexts[Number(index)] ?? "",
+        );
+    }
 
     return {
         html: outputHtml,

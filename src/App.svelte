@@ -9,16 +9,22 @@
         createEmptyCard,
         loadMedia,
         loadState,
+        rehydrateCardMedia,
+        saveMedia,
         saveState,
         type MediaRecord,
     } from "./store";
     import { buildApkg } from "./export/apkg";
+    import { importApkg } from "./import/apkg";
 
     let deckName = $state("My Deck");
     let cards = $state<Card[]>([]);
     let selectedId = $state<string | null>(null);
-    let exportMessage = $state("");
+    let statusMessage = $state("");
+    let statusIsError = $state(false);
     let exporting = $state(false);
+    let importing = $state(false);
+    let fileInput = $state<HTMLInputElement | undefined>(undefined);
 
     let mainEditor = $state<RichEditor | undefined>(undefined);
     let secondaryEditor = $state<RichEditor | undefined>(undefined);
@@ -28,9 +34,14 @@
     onMount(async () => {
         const state = await loadState();
         deckName = state.deckName;
-        cards = state.cards;
+        cards = await rehydrateCardMedia(state.cards);
         selectedId = cards[0]?.id ?? null;
     });
+
+    function setStatus(message: string, isError = false): void {
+        statusMessage = message;
+        statusIsError = isError;
+    }
 
     async function persist(): Promise<void> {
         await saveState({ deckName, cards });
@@ -64,23 +75,15 @@
         void persist();
     }
 
-    function mediaResolver(id: string): MediaRecord | undefined {
-        // synchronous resolver can't load async media; export uses async loader below
-        return undefined;
-    }
-
     async function exportDeck(): Promise<void> {
         if (!cards.length) {
-            exportMessage = "Add at least one card before exporting.";
+            setStatus("Add at least one card before exporting.", true);
             return;
         }
         exporting = true;
-        exportMessage = "";
+        setStatus("");
         try {
             const mediaCache = new Map<string, MediaRecord>();
-            const resolver = (id: string) => {
-                return mediaCache.get(id);
-            };
 
             for (const card of cards) {
                 const htmlParts =
@@ -117,11 +120,70 @@
             a.click();
             URL.revokeObjectURL(url);
 
-            exportMessage = `Exported ${result.noteCount} notes (${result.cardCount} cards). Double-click the file to import into Anki.`;
+            setStatus(
+                `Exported ${result.noteCount} notes (${result.cardCount} cards). Double-click the file to import into Anki.`,
+            );
         } catch (err) {
-            exportMessage = `Export failed: ${err instanceof Error ? err.message : String(err)}`;
+            setStatus(`Export failed: ${err instanceof Error ? err.message : String(err)}`, true);
         } finally {
             exporting = false;
+        }
+    }
+
+    async function importDeck(file: File): Promise<void> {
+        importing = true;
+        setStatus("");
+        try {
+            const result = await importApkg(file);
+            if (!result.cards.length) {
+                setStatus("That file did not contain any cards Card Maker can edit.", true);
+                return;
+            }
+
+            for (const record of result.media) {
+                await saveMedia(record);
+            }
+
+            // Cards are matched on their Anki id, so importing a deck you already
+            // have updates those cards instead of duplicating them.
+            const existing = new Map(cards.map((card) => [card.id, card]));
+            let added = 0;
+            let updated = 0;
+            for (const card of result.cards) {
+                if (existing.has(card.id)) {
+                    updated++;
+                    existing.set(card.id, { ...existing.get(card.id)!, ...card });
+                } else {
+                    added++;
+                    existing.set(card.id, card);
+                }
+            }
+
+            const hadNoCards = cards.length === 0;
+            cards = [...existing.values()];
+            if (hadNoCards && result.deckName) {
+                deckName = result.deckName;
+            }
+            selectedId = result.cards[0]?.id ?? selectedId;
+            await persist();
+
+            const parts = [`Imported ${added} new card${added === 1 ? "" : "s"}`];
+            if (updated) parts.push(`updated ${updated}`);
+            if (result.skipped) parts.push(`skipped ${result.skipped}`);
+            setStatus(`${parts.join(", ")}. ${result.warnings.join(" ")}`.trim());
+        } catch (err) {
+            setStatus(`Import failed: ${err instanceof Error ? err.message : String(err)}`, true);
+        } finally {
+            importing = false;
+        }
+    }
+
+    function handleFilePicked(event: Event): void {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = "";
+        if (file) {
+            void importDeck(file);
         }
     }
 
@@ -152,15 +214,25 @@
                     placeholder="My Deck"
                 />
             </label>
+            <input
+                type="file"
+                accept=".apkg"
+                bind:this={fileInput}
+                onchange={handleFilePicked}
+                hidden
+            />
+            <button onclick={() => fileInput?.click()} disabled={importing}>
+                {importing ? "Importing…" : "Import deck"}
+            </button>
             <button class="primary" onclick={() => void exportDeck()} disabled={exporting}>
                 {exporting ? "Exporting…" : "Export to Anki"}
             </button>
         </div>
     </header>
 
-    {#if exportMessage}
-        <div class="export-banner" class:error={exportMessage.startsWith("Export failed")}>
-            {exportMessage}
+    {#if statusMessage}
+        <div class="export-banner" class:error={statusIsError}>
+            {statusMessage}
         </div>
     {/if}
 
@@ -257,13 +329,18 @@
                 {/key}
 
                 <p class="hint">
-                    Paste or drop images into any field. When you're done, click <strong>Export to Anki</strong>,
-                    then double-click the downloaded file to import it.
+                    Paste or drop images into any field. Use <strong>Import deck</strong> to
+                    reopen a previous <code>.apkg</code>, then <strong>Export to Anki</strong>
+                    when you are done.
                 </p>
             {:else}
                 <div class="empty-editor">
                     <h2>Welcome</h2>
                     <p>Create a fill-in-the-blank or question &amp; answer card to get started.</p>
+                    <p>
+                        Already made a deck? Click <strong>Import deck</strong> and pick the
+                        <code>.apkg</code> file to keep editing those cards.
+                    </p>
                 </div>
             {/if}
         </section>
