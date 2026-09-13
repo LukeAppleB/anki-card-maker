@@ -103,6 +103,19 @@ function buildModelsJson(ts: number): string {
   color: black;
   background-color: white;
 }
+.card p {
+  margin: 0.35em 0;
+}
+.card ul,
+.card ol {
+  display: inline-block;
+  text-align: left;
+  margin: 0.4em auto;
+  padding-left: 1.4em;
+}
+.card li {
+  margin: 0.15em 0;
+}
 .cloze {
   font-weight: bold;
   color: blue;

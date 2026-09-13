@@ -44,4 +44,13 @@ describe("htmlToAnki", () => {
     it("strips html for sort fields", () => {
         expect(stripHtml("<p>Hello <b>world</b></p>")).toBe("Hello world");
     });
+
+    it("keeps multiline answers and lists", () => {
+        const html = "<p>First line</p><p>Second line</p><ul><li><p>Item</p></li></ul>";
+        const { html: out } = htmlToAnki(html, () => undefined);
+        expect(out).toContain("<p>First line</p>");
+        expect(out).toContain("<p>Second line</p>");
+        expect(out).toContain("<ul>");
+        expect(out).toContain("Item");
+    });
 });

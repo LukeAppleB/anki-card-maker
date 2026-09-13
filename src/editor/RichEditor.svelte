@@ -144,6 +144,10 @@
         editor?.chain().focus().toggleBulletList().run();
     }
 
+    export function toggleOrderedList(): void {
+        editor?.chain().focus().toggleOrderedList().run();
+    }
+
     export function setHighlight(color: string): void {
         editor?.chain().focus().toggleHighlight({ color }).run();
     }
@@ -181,6 +185,24 @@
 
     :global(.rich-editor-content p) {
         margin: 0 0 0.5em;
+    }
+
+    :global(.rich-editor-content p:last-child) {
+        margin-bottom: 0;
+    }
+
+    :global(.rich-editor-content ul),
+    :global(.rich-editor-content ol) {
+        margin: 0.25em 0 0.6em;
+        padding-left: 1.4em;
+    }
+
+    :global(.rich-editor-content li) {
+        margin: 0.15em 0;
+    }
+
+    :global(.rich-editor-content li p) {
+        margin: 0;
     }
 
     :global(.rich-editor-content img) {

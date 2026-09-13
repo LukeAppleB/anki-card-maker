@@ -31,6 +31,18 @@
 
     const selectedCard = $derived(cards.find((c) => c.id === selectedId) ?? null);
 
+    function formatEditor(editor: RichEditor | undefined) {
+        return {
+            bold: () => editor?.toggleBold(),
+            italic: () => editor?.toggleItalic(),
+            underline: () => editor?.toggleUnderline(),
+            bullets: () => editor?.toggleBulletList(),
+            numbers: () => editor?.toggleOrderedList(),
+            highlight: () => editor?.setHighlight("#fef08a"),
+            red: () => editor?.setTextColor("#dc2626"),
+        };
+    }
+
     onMount(async () => {
         const state = await loadState();
         deckName = state.deckName;
@@ -270,29 +282,22 @@
                     <button class="danger" onclick={deleteSelected}>Delete card</button>
                 </div>
 
-                <div class="toolbar">
-                    {#if selectedCard.kind === "cloze"}
-                        <button onclick={() => mainEditor?.makeBlank(true)} title="Make blank (Ctrl+Shift+B)">
-                            Make blank
-                        </button>
-                        <button onclick={() => mainEditor?.makeBlank(false)} title="Same blank number as last">
-                            Same blank
-                        </button>
-                        <button onclick={() => mainEditor?.removeBlank()}>Remove blank</button>
-                        <span class="sep"></span>
-                    {/if}
-                    <button onclick={() => mainEditor?.toggleBold()}><strong>B</strong></button>
-                    <button onclick={() => mainEditor?.toggleItalic()}><em>I</em></button>
-                    <button onclick={() => mainEditor?.toggleUnderline()}><u>U</u></button>
-                    <button onclick={() => mainEditor?.toggleBulletList()}>• List</button>
-                    <button onclick={() => mainEditor?.setHighlight("#fef08a")}>Highlight</button>
-                    <button onclick={() => mainEditor?.setTextColor("#dc2626")}>Red</button>
-                </div>
-
                 {#key selectedCard.id}
                     {#if selectedCard.kind === "cloze"}
                         {@const fields = selectedCard.fields as ClozeFields}
+                        {@const extraFormat = formatEditor(secondaryEditor)}
                         <p class="field-label">Sentence (select words, then click Make blank)</p>
+                        <div class="toolbar">
+                            <button onclick={() => mainEditor?.makeBlank(true)} title="Make blank (Ctrl+Shift+B)">
+                                Make blank
+                            </button>
+                            <button onclick={() => mainEditor?.makeBlank(false)} title="Same blank number as last">
+                                Same blank
+                            </button>
+                            <button onclick={() => mainEditor?.removeBlank()}>Remove blank</button>
+                            <span class="sep"></span>
+                            {@render formatButtons(formatEditor(mainEditor))}
+                        </div>
                         <RichEditor
                             bind:this={mainEditor}
                             content={fields.text}
@@ -302,15 +307,22 @@
                         />
 
                         <p class="field-label">Extra info (shown with the answer)</p>
+                        <div class="toolbar">
+                            {@render formatButtons(extraFormat)}
+                        </div>
                         <RichEditor
                             bind:this={secondaryEditor}
                             content={fields.extra}
-                            placeholder="Optional hint or explanation…"
+                            placeholder="Optional hint or explanation. Press Enter for a new line…"
                             onchange={(html) => updateField("extra", html)}
                         />
                     {:else}
                         {@const fields = selectedCard.fields as QAFields}
+                        {@const answerFormat = formatEditor(secondaryEditor)}
                         <p class="field-label">Question</p>
+                        <div class="toolbar">
+                            {@render formatButtons(formatEditor(mainEditor))}
+                        </div>
                         <RichEditor
                             bind:this={mainEditor}
                             content={fields.front}
@@ -319,19 +331,22 @@
                         />
 
                         <p class="field-label">Answer</p>
+                        <div class="toolbar">
+                            {@render formatButtons(answerFormat)}
+                        </div>
                         <RichEditor
                             bind:this={secondaryEditor}
                             content={fields.back}
-                            placeholder="The answer…"
+                            placeholder="The answer… Press Enter for a new line, or use the list buttons."
                             onchange={(html) => updateField("back", html)}
                         />
                     {/if}
                 {/key}
 
                 <p class="hint">
-                    Paste or drop images into any field. Use <strong>Import deck</strong> to
-                    reopen a previous <code>.apkg</code>, then <strong>Export to Anki</strong>
-                    when you are done.
+                    Press <strong>Enter</strong> for a new line in any field. Paste or drop
+                    images too. Use <strong>Import deck</strong> to reopen a previous
+                    <code>.apkg</code>, then <strong>Export to Anki</strong> when you are done.
                 </p>
             {:else}
                 <div class="empty-editor">
@@ -346,6 +361,16 @@
         </section>
     </div>
 </main>
+
+{#snippet formatButtons(actions: ReturnType<typeof formatEditor>)}
+    <button onclick={actions.bold} title="Bold"><strong>B</strong></button>
+    <button onclick={actions.italic} title="Italic"><em>I</em></button>
+    <button onclick={actions.underline} title="Underline"><u>U</u></button>
+    <button onclick={actions.bullets} title="Bullet list">• List</button>
+    <button onclick={actions.numbers} title="Numbered list">1. List</button>
+    <button onclick={actions.highlight} title="Highlight">Highlight</button>
+    <button onclick={actions.red} title="Red text">Red</button>
+{/snippet}
 
 <style>
     :global(body) {
