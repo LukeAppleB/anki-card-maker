@@ -129,7 +129,7 @@ fi
 echo
 echo "Done. 'Card Maker' is in $(dirname "$APP_BUNDLE")."
 echo
-echo "Tell her:"
+echo "How to open it:"
 echo "  1. Double-click Card Maker to start it (a Terminal window opens, that is normal)."
 echo "  2. It opens in the browser at http://localhost:$PORT"
 echo "  3. Close the Terminal window when finished."

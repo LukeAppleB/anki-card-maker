@@ -7,29 +7,38 @@ A simple web app for creating Anki flashcards without learning Anki's editor syn
 - **Formatting & images** — bold, italic, lists, colours, paste/drop images
 - **Export** — downloads a `.apkg` file you can import into Anki (desktop, AnkiMobile, AnkiDroid)
 
-## Run locally
+## Install
+
+The double-clickable app is macOS only. It is created in `~/Applications`. Homebrew and the one-liner install Node.js when the Mac does not already have Node 20.19+ or 22.12+.
+
+### Homebrew
 
 ```bash
-cd card-maker
-npm install
-npm run dev
+brew install node && curl -fsSL https://raw.githubusercontent.com/LukeAppleB/anki-card-maker/main/install.sh | bash
 ```
 
-Open the URL shown in the terminal (usually http://localhost:5173).
-
-## Install as a clickable app (macOS)
-
-This creates a **Card Maker** app in `~/Applications` with its own icon. Double-clicking it opens a
-Terminal window, starts the local server and opens Card Maker in the browser. Requires
-[Node.js](https://nodejs.org) on the machine.
+Install [Homebrew](https://brew.sh) first when `brew` is not already on the Mac:
 
 ```bash
-cd card-maker
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+### One-liner
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LukeAppleB/anki-card-maker/main/install.sh | bash
+```
+
+### npm
+
+```bash
+git clone https://github.com/LukeAppleB/anki-card-maker.git
+cd anki-card-maker
 npm install
 npm run app:install
 ```
 
-What she does after that:
+After the app is installed:
 
 1. Double-click **Card Maker** (a Terminal window opens — that is normal and expected).
 2. It opens automatically in the browser at http://localhost:4321.
@@ -44,16 +53,28 @@ Details worth knowing:
   you move or delete this source folder.
 - The server listens on `127.0.0.1` only, so it is not reachable from the network.
 - The app icon comes from `assets/icon.png`; replace that file and reinstall to change it.
-- To use a different port: `CARD_MAKER_PORT=5555 npm run app:install`.
+- To use a different port: `CARD_MAKER_PORT=5555 bash install.sh`. With the one-liner: `curl -fsSL https://raw.githubusercontent.com/LukeAppleB/anki-card-maker/main/install.sh | CARD_MAKER_PORT=5555 bash`.
 - To preview the install without creating the app: `bash scripts/install-app.sh --dry-run`.
 
-After changing the code, re-run `npm run app:install` to rebuild and update the installed copy.
+After changing the code, run the install command again (or `npm run app:install` from a checkout) to rebuild and update the installed copy.
 
 To remove it (saved cards are untouched, since they live in the browser):
 
 ```bash
-npm run app:uninstall
+curl -fsSL https://raw.githubusercontent.com/LukeAppleB/anki-card-maker/main/install.sh | bash -s -- --uninstall
 ```
+
+From a checkout: `npm run app:uninstall`.
+
+## Run locally
+
+```bash
+cd anki-card-maker
+npm install
+npm run dev
+```
+
+Open the URL shown in the terminal (usually http://localhost:5173). This works on Windows and Linux too. The clickable app install is macOS only.
 
 ## Build for hosting
 
@@ -88,5 +109,6 @@ npm run check     # typecheck
 - `src/store.ts` — card data + IndexedDB persistence
 - `scripts/serve.mjs` — dependency-free static server
 - `scripts/launch.command` — what the app icon runs: starts the server and opens the browser
+- `install.sh` — macOS installer used by the Homebrew and curl one-liners
 - `scripts/install-app.sh` / `scripts/uninstall.sh` — builds the `.app` bundle and removes it
 - `assets/icon.png` — source image for the app icon
